@@ -402,14 +402,12 @@ def main():
 
     if articles:
         print(f"\n{len(articles)} new EdTech article(s) found. Sending email...")
+        if send_email(articles):
+            for art in articles:
+                seen.add(art["_id"])
+            save_seen(seen)
     else:
-        print("\nNo new EdTech articles found this run. Sending email anyway...")
-
-    if send_email(articles):
-        # Only mark matched articles as seen once they've been successfully emailed
-        for art in articles:
-            seen.add(art["_id"])
-        save_seen(seen)
+        print("\nNo new EdTech articles found this run.")
 
     print("Done.\n")
 

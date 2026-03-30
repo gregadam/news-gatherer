@@ -302,14 +302,13 @@ def gather_articles() -> list[dict]:
             aid = article_id(art["url"])
             if aid in seen:
                 continue
-            seen.add(aid)
             if is_edtech_article(art["title"], art["summary"]):
                 art["source"] = source_name
+                art["_id"] = aid
                 new_matches.append(art)
                 print(f"  ✓ MATCH: {art['title'][:80]}")
 
-    save_seen(seen)
-    return new_matches
+    return new_matches, seen
 
 
 # ---------------------------------------------------------------------------
@@ -399,14 +398,19 @@ def send_email(articles: list[dict]) -> bool:
 # ---------------------------------------------------------------------------
 def main():
     print(f"=== EdTech News Monitor — {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')} ===")
-    articles = gather_articles()
+    articles, seen = gather_articles()
 
     if articles:
         print(f"\n{len(articles)} new EdTech article(s) found. Sending email...")
     else:
         print("\nNo new EdTech articles found this run. Sending email anyway...")
 
-    send_email(articles)
+    if send_email(articles):
+        # Only mark matched articles as seen once they've been successfully emailed
+        for art in articles:
+            seen.add(art["_id"])
+        save_seen(seen)
+
     print("Done.\n")
 
 

@@ -323,10 +323,12 @@ def send_email(articles: list[dict]) -> bool:
 
     # Build HTML body
     now = datetime.now(timezone.utc).strftime("%d %b %Y %H:%M UTC")
-    rows = ""
-    for art in articles:
-        summary_html = f"<p style='color:#555;margin:4px 0 0 0;'>{art['summary'][:300]}</p>" if art["summary"] else ""
-        rows += f"""
+
+    if articles:
+        rows = ""
+        for art in articles:
+            summary_html = f"<p style='color:#555;margin:4px 0 0 0;'>{art['summary'][:300]}</p>" if art["summary"] else ""
+            rows += f"""
         <tr>
           <td style="padding:12px 16px;border-bottom:1px solid #eee;">
             <span style="color:#888;font-size:12px;">{art.get('source', 'Unknown')}</span><br>
@@ -336,34 +338,35 @@ def send_email(articles: list[dict]) -> bool:
             {summary_html}
           </td>
         </tr>"""
+        body_content = f"<p style='color:#555;'>Found <strong>{len(articles)}</strong> new article(s) as of {now}.</p><table style='width:100%;border-collapse:collapse;'>{rows}</table>"
+        subject = f"EdTech News Alert — {len(articles)} new article(s)"
+        text_body = f"EdTech News Alert — {len(articles)} new article(s) as of {now}\n\n"
+        for art in articles:
+            text_body += f"[{art.get('source', '')}] {art['title']}\n{art['url']}\n"
+            if art["summary"]:
+                text_body += f"{art['summary'][:200]}\n"
+            text_body += "\n"
+    else:
+        body_content = f"<p style='color:#555;'>No new EdTech articles found as of {now}.</p>"
+        subject = "EdTech News Alert — no new articles"
+        text_body = f"EdTech News Alert — no new articles as of {now}\n"
 
     html_body = f"""
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:640px;margin:0 auto;">
       <h2 style="color:#1a1a1a;border-bottom:2px solid #1a73e8;padding-bottom:8px;">
         EdTech News Alert
       </h2>
-      <p style="color:#555;">Found <strong>{len(articles)}</strong> new article(s) as of {now}.</p>
-      <table style="width:100%;border-collapse:collapse;">
-        {rows}
-      </table>
+      {body_content}
       <p style="color:#999;font-size:12px;margin-top:24px;">
         Sources checked: TES, Schools Week, BBC News (Education &amp; Technology)
       </p>
     </div>
     """
 
-    # Plain text fallback
-    text_body = f"EdTech News Alert — {len(articles)} new article(s) as of {now}\n\n"
-    for art in articles:
-        text_body += f"[{art.get('source', '')}] {art['title']}\n{art['url']}\n"
-        if art["summary"]:
-            text_body += f"{art['summary'][:200]}\n"
-        text_body += "\n"
-
     payload = {
         "From": EMAIL_FROM,
         "To": EMAIL_TO,
-        "Subject": f"EdTech News Alert — {len(articles)} new article(s)",
+        "Subject": subject,
         "HtmlBody": html_body,
         "TextBody": text_body,
         "MessageStream": "outbound",
@@ -400,10 +403,10 @@ def main():
 
     if articles:
         print(f"\n{len(articles)} new EdTech article(s) found. Sending email...")
-        send_email(articles)
     else:
-        print("\nNo new EdTech articles found this run.")
+        print("\nNo new EdTech articles found this run. Sending email anyway...")
 
+    send_email(articles)
     print("Done.\n")
 
 
